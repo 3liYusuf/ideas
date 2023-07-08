@@ -13,4 +13,14 @@ body {
   font-size: 2rem;
   color: #fff;
   background-color: #000;
+  border-radius: 0.5rem;
+}
+
+.secret-input {
+  text-align: center;
+  font-size: 2rem;
+  color: #000;
+  background-color: #fff;
+  border-radius: 0.5rem;
+  width: 100%;
 }

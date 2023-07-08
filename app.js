@@ -5,21 +5,20 @@ const app = express();
 const mongoose = require("mongoose");
 const { log } = require("console");
 const encrypt = require('mongoose-encryption');
-const md5 = require("md5");
-const bcrypt = require("bcrypt");
-const saltRounds = 10;
 var session = require('express-session');
 const passport = require("passport");
 const passportLocalMongoose = require("passport-local-mongoose");
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const findOrCreate = require("mongoose-findorcreate");
 
 app.use(express.static("public"));
 app.set('view engine', 'ejs');
 app.use(express.urlencoded({extended:true}));
 
 app.use(session({
-    secret: "Our little secret.",
-    resave: false,
-    saveUninitialized: false,
+    secret: "Our little secret.", //to encrypt session data
+    resave: false, //true=save session every request, false=optimize perfromance & save when needed
+    saveUninitialized: false, //true=create session for every user, false=session for initialized
 }))
 
 app.use(passport.initialize());
@@ -30,20 +29,66 @@ mongoose.connect("mongodb://127.0.0.1:27017/userDB", {useNewUrlParser:true});
 
 const userSchema = new mongoose.Schema({
     email:String,
-    password:String
+    password:String,
+    googleId:String
 });
 
+const secretSchema = new mongoose.Schema({
+    text:String
+});
+
+const Secret = mongoose.model("Secret", secretSchema);
+
 userSchema.plugin(passportLocalMongoose);
+userSchema.plugin(findOrCreate);
 
 const User = mongoose.model("User", userSchema);
 
 passport.use(User.createStrategy());
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
+passport.serializeUser(function(user, cb) {
+    process.nextTick(function() {
+        return cb(null, {
+        id: user.id,
+        username: user.username,
+        picture: user.picture
+        });
+    });
+});
+  
+passport.deserializeUser(function(user, cb) {
+process.nextTick(function() {
+    return cb(null, user);
+});
+});
+passport.use(new GoogleStrategy({
+    clientID: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/google/secrets",
+    userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
+  },
+  function(accessToken, refreshToken, profile, cb) {
+    log(profile);
+    User.findOrCreate({username: profile.displayName, googleId: profile.id }, function (err, user) {
+      return cb(err, user);
+    });
+  }
+));
+
 
 app.get("/", function(req,res){
     res.render("home");
 })
+
+app.get("/auth/google", passport.authenticate('google', {scope:["profile"]}));
+
+
+app.get('/auth/google/secrets', 
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  function(req, res) {
+    // Successful authentication, redirect home.
+    res.redirect('/secrets');
+  }
+);
 
 app.get("/login", function(req,res){
     res.render("login");
@@ -53,21 +98,34 @@ app.get("/register", function(req,res){
     res.render("register");
 })
 
+app.get("/submit", function(req,res){
+    if(req.isAuthenticated()){
+        res.render("submit");
+    }else{
+        res.redirect("/login");
+    }
+
+})
+
 app.get("/secrets", function(req,res){
     if(req.isAuthenticated()){
-        res.render("secrets");
+        Secret.find(function(err,foundSecrets){
+            if(!err){
+                res.render("secrets",{foundSecrets:foundSecrets});
+            }
+        })
     }else{
         res.redirect("/login");
     }
 })
 
 app.get("/logout", function(req,res){
-    req.logout(function(err) {
+    req.logout((function(err) {
         if (err) {
             log(err);
-        }
-        res.redirect('/');
-      });
+        }else{
+        res.redirect('/');}
+      }));
 })
 
 app.post('/register',function(req,res){
@@ -82,20 +140,6 @@ app.post('/register',function(req,res){
             })
         }
     })
-
-    // bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
-    //     const newUser = new User({
-    //         email: req.body.username,
-    //         password: hash
-    //     });
-    //     newUser.save(function(err){
-    //         if(err){
-    //             log(err);
-    //         }else{
-    //             res.render("secrets");
-    //         }
-    //     })
-    // });
 })
 
 app.post("/login",function(req,res){
@@ -116,22 +160,20 @@ app.post("/login",function(req,res){
             })
         }
     })
-    // User.findOne({email:username}, function(err,foundUser){
-    //     if(err){
-    //         log(err);
-    //     }else{
-    //         if(foundUser){
-    //             bcrypt.compare(password, foundUser.password, function(err, result) {
-    //                 console.log(result);
-    //                 if(result == true){
-    //                     res.render("secrets")
-    //                 }
-    //             });
-    //         }
-    //     }
-    // })
 })
 
+app.post("/submit",function(req,res){
+    const insertedSecret = req.body.secret;
+    const secret = new Secret({text:insertedSecret});
+    secret.save(function(err){
+        if(!err){
+            res.redirect("secrets");
+        }else{
+            console.log(err);
+            res.redirect("submit");
+        }
+    });
+})
 
 
 
