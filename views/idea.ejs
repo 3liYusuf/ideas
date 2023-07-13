@@ -7,8 +7,14 @@
     <h1 class="display-3">IDEAS</h1>
     <p class="lead">To Provide some ideas for you to do!</p>
     <hr>
-
-
+    
+    <div id="ideas">
+        <h4><%= name %></h4>
+        <h5><%= description %></h5>
+        <h5><%= job %></h5>
+        <h5><%= type %></h5>
+        <h5><%= selected %></h5>
+      </div>
     <form action="/idea" method="post">
       <select name="category_id" class="justify-content-center gen-btn outline-none select-apperance shadow hover:shadow-md transition-all relative cursor-pointer p-5 font-bold rounded-full  ">
         <option value="Website">Website</option>
@@ -19,8 +25,7 @@
         <option value="Prints">Prints</option>
         <option value="UI">UI</option>
       </select>
-
-      <button class="btn btn-light btn-lg" type="submit">Show idea</button>
+      <button class="btn btn-light btn-lg" type="submit">Show next Idea</button>
     </form>
   </div>
 </div>

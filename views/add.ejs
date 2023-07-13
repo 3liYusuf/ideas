@@ -1,0 +1,19 @@
+<%- include('partials/header') %>
+
+    <form action="/add" method="post">
+        <input type="text" name="name">
+        <input type="text" name="description">
+        <input type="text" name="job">
+        <select name="category_id" class="justify-content-center">
+            <option value="Website">Website</option>
+            <option value="Application">Application</option>
+            <option value="Logo">Logo</option>
+            <option value="SocialMedia">Social Media</option>
+            <option value="VisualIdentity">Visual Identity</option>
+            <option value="Prints">Prints</option>
+            <option value="UI">UI</option>
+          </select>
+          <button type="submit">Submit</button>
+    </form>
+
+<%- include('partials/footer') %>
